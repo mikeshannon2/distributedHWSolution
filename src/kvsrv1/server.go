@@ -63,17 +63,17 @@ func (kv *KVServer) Put(args *rpc.PutArgs, reply *rpc.PutReply) {
 	defer kv.mu.Unlock()
 
 	key := args.Key
-	version := args.Version
+	ver := args.Version
 	v, ok := kv.data[key]
-	if !ok && version != 0 {
+	if !ok && ver != 0 {
 		reply.Err = rpc.ErrNoKey
-	} else if !ok && version == 0 {
-		kv.data[key] = valueInfo{value: args.Value, version: version + 1}
+	} else if !ok && ver == 0 {
+		kv.data[key] = valueInfo{value: args.Value, version: 1}
 		reply.Err = rpc.OK
-	} else if ok && version != v.version {
+	} else if ok && ver != v.version {
 		reply.Err = rpc.ErrVersion
-	} else if ok && version == v.version {
-		kv.data[key] = valueInfo{value: args.Value, version: version + 1}
+	} else if ok && ver == v.version {
+		kv.data[key] = valueInfo{value: args.Value, version: v.version + 1}
 	}
 }
 
