@@ -99,7 +99,7 @@ func (ts *Test) GenericTest() {
 			// requests and had time to checkpoint.
 			sz := ts.Config.Group(Gid).LogSize()
 			if sz > 8*ts.maxraftstate {
-				ts.Fatalf("logs were not trimmed (%v > 8*%v)", sz, ts.maxraftstate)
+				ts.t.Fatalf("logs were not trimmed (%v > 8*%v)", sz, ts.maxraftstate)
 			}
 		}
 		if ts.maxraftstate < 0 {
@@ -178,7 +178,8 @@ func TestOnePartition4A(t *testing.T) {
 
 	ver0 := ts.PutAtLeastOnce(ck, "1", "13", rpc.Tversion(0), -1)
 
-	p1, p2 := ts.Group(Gid).MakePartition()
+	_, l := ts.Leader()
+	p1, p2 := ts.Group(Gid).MakePartition(l)
 	ts.Group(Gid).Partition(p1, p2)
 
 	ckp1 := ts.MakeClerkTo(p1)  // connect ckp1 to p1

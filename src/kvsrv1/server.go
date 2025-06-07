@@ -6,7 +6,6 @@ import (
 
 	"6.5840/kvsrv1/rpc"
 	"6.5840/labrpc"
-	"6.5840/raft"
 	tester "6.5840/tester1"
 )
 
@@ -77,17 +76,12 @@ func (kv *KVServer) Put(args *rpc.PutArgs, reply *rpc.PutReply) {
 	}
 }
 
-// You can ignore for this lab
+// You can ignore Kill() for this lab
 func (kv *KVServer) Kill() {
 }
 
-// You can ignore for this lab
-func (kv *KVServer) Raft() *raft.Raft {
-	return nil
-}
-
-// You can ignore all arguments; they are for replicated KVservers in lab 4
-func StartKVServer(ends []*labrpc.ClientEnd, gid tester.Tgid, srv int, persister *raft.Persister, maxraftstate int) tester.IKVServer {
+// You can ignore all arguments; they are for replicated KVservers
+func StartKVServer(ends []*labrpc.ClientEnd, gid tester.Tgid, srv int, persister *tester.Persister) []tester.IService {
 	kv := MakeKVServer()
-	return kv
+	return []tester.IService{kv}
 }

@@ -4,26 +4,21 @@ import (
 	crand "crypto/rand"
 	"encoding/base64"
 	"fmt"
-	// "log"
+	//"log"
 	"math/big"
 	"math/rand"
 	"runtime"
-	"runtime/debug"
+	// "runtime/debug"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	"6.5840/labrpc"
-	"6.5840/raft"
 )
 
 const GRP0 = 0
-
-type IKVServer interface {
-	Raft() *raft.Raft
-	Kill()
-}
 
 type Config struct {
 	*Clnts  // The clnts in the test
@@ -39,7 +34,7 @@ type Config struct {
 	ops   int32     // number of clerk get/put/append method calls
 }
 
-func MakeConfig(t *testing.T, n int, reliable bool, maxraftstate int, mks FstartServer) *Config {
+func MakeConfig(t *testing.T, n int, reliable bool, mks FstartServer) *Config {
 	ncpu_once.Do(func() {
 		if runtime.NumCPU() < 2 {
 			fmt.Printf("warning: only one CPU, which may conceal locking bugs\n")
@@ -51,7 +46,7 @@ func MakeConfig(t *testing.T, n int, reliable bool, maxraftstate int, mks Fstart
 	cfg.t = t
 	cfg.net = labrpc.MakeNetwork()
 	cfg.Groups = newGroups(cfg.net)
-	cfg.MakeGroupStart(GRP0, n, maxraftstate, mks)
+	cfg.MakeGroupStart(GRP0, n, mks)
 	cfg.Clnts = makeClnts(cfg.net)
 	cfg.start = time.Now()
 
@@ -87,8 +82,8 @@ func (cfg *Config) Cleanup() {
 	cfg.CheckTimeout()
 }
 
-func (cfg *Config) MakeGroupStart(gid Tgid, nsrv, maxraftstate int, mks FstartServer) {
-	cfg.MakeGroup(gid, nsrv, maxraftstate, mks)
+func (cfg *Config) MakeGroupStart(gid Tgid, nsrv int, mks FstartServer) {
+	cfg.MakeGroup(gid, nsrv, mks)
 	cfg.Group(gid).StartServers()
 }
 
@@ -143,8 +138,27 @@ func (cfg *Config) End() {
 }
 
 func (cfg *Config) Fatalf(format string, args ...any) {
-	debug.PrintStack()
-	cfg.t.Fatalf(format, args...)
+	const maxStackLen = 50
+	fmt.Printf("Fatal: ")
+	fmt.Printf(format, args...)
+	fmt.Println("")
+	var pc [maxStackLen]uintptr
+	// Skip two extra frames to account for this function
+	// and runtime.Callers itself.
+	n := runtime.Callers(2, pc[:])
+	if n == 0 {
+		panic("testing: zero callers found")
+	}
+	frames := runtime.CallersFrames(pc[:n])
+	var frame runtime.Frame
+	for more := true; more; {
+		frame, more = frames.Next()
+		// Print only frames in our test files
+		if strings.Contains(frame.File, "test.go") {
+			fmt.Printf("        %v:%d\n", frame.File, frame.Line)
+		}
+	}
+	cfg.t.FailNow()
 }
 
 func Randstring(n int) string {
