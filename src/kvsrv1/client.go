@@ -64,14 +64,12 @@ func (ck *Clerk) Put(key, value string, version rpc.Tversion) rpc.Err {
 	args := rpc.PutArgs{Key: key, Value: value, Version: version}
 	reply := rpc.PutReply{}
 	receivedReply := ck.clnt.Call(ck.server, "KVServer.Put", &args, &reply)
-	//fmt.Println("Here in Put: ", receivedReply, " ", reply.Err)
 	if receivedReply {
 		return reply.Err
 	}
 
 	var errReturn rpc.Err
 	for !receivedReply {
-		//fmt.Println("Here in Put loop: ", receivedReply)
 		newReply := rpc.PutReply{}
 		receivedReply = ck.clnt.Call(ck.server, "KVServer.Put", &args, &newReply)
 		errReturn = newReply.Err
@@ -80,6 +78,5 @@ func (ck *Clerk) Put(key, value string, version rpc.Tversion) rpc.Err {
 	if errReturn == rpc.ErrVersion {
 		errReturn = rpc.ErrMaybe
 	}
-	//fmt.Println("Here in Put at bottom: ", errReturn)
 	return errReturn
 }
