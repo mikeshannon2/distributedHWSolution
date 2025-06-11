@@ -34,9 +34,11 @@ func (lk *Lock) Acquire() {
 			putErr = lk.ck.Put(lk.lockKey, lk.lockId, 0)
 		} else if value == "0" {
 			putErr = lk.ck.Put(lk.lockKey, lk.lockId, version)
+		} else if value == lk.lockId {
+			break
 		}
 
-		if putErr == rpc.ErrVersion {
+		if putErr == rpc.ErrVersion || putErr == rpc.ErrMaybe {
 			time.Sleep(50 * time.Millisecond)
 		} else {
 			break
