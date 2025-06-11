@@ -31,9 +31,14 @@ func (ck *Clerk) Get(key string) (string, rpc.Tversion, rpc.Err) {
 
 	// You will have to modify this function.
 	args := rpc.GetArgs{Key: key}
-	reply := rpc.GetReply{}
-	ck.clnt.Call(ck.server, "KVServer.Get", &args, &reply)
-	return reply.Value, reply.Version, reply.Err
+	replyRet := rpc.GetReply{}
+	goodReply := false
+	for !goodReply {
+		reply := rpc.GetReply{}
+		goodReply = ck.clnt.Call(ck.server, "KVServer.Get", &args, &reply)
+		replyRet = reply
+	}
+	return replyRet.Value, replyRet.Version, replyRet.Err
 }
 
 // Put updates key with value only if version is the version in the
@@ -58,6 +63,23 @@ func (ck *Clerk) Put(key, value string, version rpc.Tversion) rpc.Err {
 
 	args := rpc.PutArgs{Key: key, Value: value, Version: version}
 	reply := rpc.PutReply{}
-	ck.clnt.Call(ck.server, "KVServer.Put", &args, &reply)
-	return reply.Err
+	receivedReply := ck.clnt.Call(ck.server, "KVServer.Put", &args, &reply)
+	//fmt.Println("Here in Put: ", receivedReply, " ", reply.Err)
+	if receivedReply {
+		return reply.Err
+	}
+
+	var errReturn rpc.Err
+	for !receivedReply {
+		//fmt.Println("Here in Put loop: ", receivedReply)
+		newReply := rpc.PutReply{}
+		receivedReply = ck.clnt.Call(ck.server, "KVServer.Put", &args, &newReply)
+		errReturn = newReply.Err
+	}
+
+	if errReturn == rpc.ErrVersion {
+		errReturn = rpc.ErrMaybe
+	}
+	//fmt.Println("Here in Put at bottom: ", errReturn)
+	return errReturn
 }
